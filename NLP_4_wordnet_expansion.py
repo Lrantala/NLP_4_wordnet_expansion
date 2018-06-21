@@ -57,12 +57,13 @@ def find_synonyms(raw_df):
                 while k < len(df[words][i]):
                     name = df[words][i][k][0]
                     wn_tag = find_wordnet_pos(df[words][i][k][1])
-                    find_wordnet_synsets(name, wn_tag)
+                    find_wordnet_synonyms(name, wn_tag)
                     k+=1
 
 def find_wordnet_synonyms(word, pos_tag):
     """This finds the synonyms from wordnet and calculates their similarity."""
-    original_word = wn.synsets(word, pos_tag)
+    if pos_tag is not None:
+        original_word = wn.synsets(word, pos_tag)
     if len(original_word) != 0:
         # print(original_word[0])
         for similar in original_word:
