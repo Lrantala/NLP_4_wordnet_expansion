@@ -47,6 +47,7 @@ def read_folder_contents(path_to_files):
 
 
 def find_synonyms(raw_df):
+    # This defines the lists that are sent to the wordnet synonym search
     lists_of_words = ["aspect_tags"]
     list_of_list_of_synonyms = []
     for i, phrase in enumerate(df["aspect"]):
@@ -63,12 +64,25 @@ def find_synonyms(raw_df):
 def find_wordnet_synonyms(word, pos_tag):
     """This finds the synonyms from wordnet and calculates their similarity."""
     if pos_tag is not None:
-        original_word = wn.synsets(word, pos_tag)
-    if len(original_word) != 0:
+        original_words = wn.synsets(word, pos_tag)
+    if len(original_words) != 0:
         # print(original_word[0])
-        for similar in original_word:
-            print("Original: %s similar: %s similarity %s" % (original_word[0], similar, original_word[0].path_similarity(similar)))
-
+        print("Original synset")
+        for similar in original_words:
+            print("Original: %s similar: %s similarity %s" % (original_words[0], similar, original_words[0].path_similarity(similar)))
+        print("Hyponyms")
+        # Hyponym is a more specific version of the word. E.g. mouse's hyponym
+        # can be field_mouse
+        for word in original_words:
+            print("Original: %s hyponym: %s" % (word, word.hyponyms()))
+        print("Hypernyms")
+        # Hypernym is a more generic term for the word. E.g. mouse's hypernym
+        # is a rodent.
+        for word in original_words:
+            print("Original: %s hypernyms: %s" % (word, word.hypernyms()))
+        print("Similar to")
+        for word in original_words:
+            print("Original: %s similar_to: %s" % (word, word.similar_tos()))
 
 def find_wordnet_pos(pos_tag):
     """This finds and returns the Wordnet version of a POS tag that is given to it."""
