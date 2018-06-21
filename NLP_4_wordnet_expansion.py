@@ -5,6 +5,9 @@ import pandas as pd
 import csv
 from nltk.corpus import wordnet as wn
 import ast
+import nltk
+
+semcor_ic = nltk.corpus.wordnet_ic.ic('ic-semcor.dat')
 
 def open_file(file, type):
     if type == "warriner":
@@ -68,12 +71,17 @@ def find_wordnet_synonyms(word, pos_tag):
     if len(original_words) != 0:
         # print(original_word[0])
         print("Original synset")
+        # Synsets are built by grouping synonyms
+        # together.
         for similar in original_words:
-            print("Original: %s similar: %s similarity %s" % (original_words[0], similar, original_words[0].path_similarity(similar)))
+            print("Original: %s similar: %s similarity %s" % (original_words[0], similar, original_words[0].jcn_similarity(similar)))
         print("Hyponyms")
         # Hyponym is a more specific version of the word. E.g. mouse's hyponym
         # can be field_mouse
         for word in original_words:
+            # Makes no sense to calculate this, as it's always 0.5 due to their distance
+            for hypowords in word.hyponyms():
+                print("Original: %s similar: %s similarity %s" % (word, hypowords, word.path_similarity(hypowords)))
             print("Original: %s hyponym: %s" % (word, word.hyponyms()))
         print("Hypernyms")
         # Hypernym is a more generic term for the word. E.g. mouse's hypernym
@@ -81,7 +89,11 @@ def find_wordnet_synonyms(word, pos_tag):
         for word in original_words:
             print("Original: %s hypernyms: %s" % (word, word.hypernyms()))
         print("Similar to")
+        # This only works with adjectives, as nouns do not have such relations
         for word in original_words:
+            # This gives always None as similarity.
+            # for similar_words in word.similar_tos():
+            #     print("Original: %s similar: %s similarity %s" % (word, similar_words, word.path_similarity(similar_words)))
             print("Original: %s similar_to: %s" % (word, word.similar_tos()))
 
 def find_wordnet_pos(pos_tag):
