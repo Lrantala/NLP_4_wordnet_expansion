@@ -117,11 +117,36 @@ def find_wordnet_pos(pos_tag):
         return wn.NOUN
 
 
-def disambiguate_word_synset_pywsdlesk(raw_df):
+def wsd_pywsd_adapted_lesk(raw_df):
     """This finds the synset of the word using
         the original sentence as context and the
-        lesk algorithms from pywsd-package."""
-    wn_lemmas = set(wn.all_lemma_names())
+        simple lesk algorithm from pywsd-package."""
+    tokenized_sentences = raw_df["original_text"]
+    aspect_words = raw_df["aspect_tags"]
+    for i, phrase in enumerate(aspect_words):
+        for word in phrase:
+            aspect = None
+            wn_check = []
+            wn_check = wn.synsets(word[0], pos=find_wordnet_pos(word[1]))
+            if len(wn_check) > 0:
+                aspect = pylesk.adapted_lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+            print("Aspect word: %s" % (word[0]))
+            if aspect is not None:
+                print("Adapted %s, Definition: %s" % (aspect, aspect.definition()))
+            print(tokenized_sentences[i])
+    opinion_words = raw_df["opinion_tags"]
+    for i, phrase in enumerate(opinion_words):
+        for word in phrase:
+            opinion = pylesk.adapted_lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+            print(tokenized_sentences[i])
+            if opinion is not None:
+                print("Adapted %s, Definition: %s" % (opinion, opinion.definition()))
+
+
+def wsd_pywsd_simple_lesk(raw_df):
+    """This finds the synset of the word using
+        the original sentence as context and the
+        simple lesk algorithm from pywsd-package."""
     tokenized_sentences = raw_df["original_text"]
     aspect_words = raw_df["aspect_tags"]
     for i, phrase in enumerate(aspect_words):
@@ -133,7 +158,7 @@ def disambiguate_word_synset_pywsdlesk(raw_df):
                 aspect = pylesk.simple_lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
             print("Aspect word: %s" % (word[0]))
             if aspect is not None:
-                print("%s, Definition: %s" % (aspect, aspect.definition()))
+                print("Simple %s, Definition: %s" % (aspect, aspect.definition()))
             print(tokenized_sentences[i])
     opinion_words = raw_df["opinion_tags"]
     for i, phrase in enumerate(opinion_words):
@@ -141,31 +166,54 @@ def disambiguate_word_synset_pywsdlesk(raw_df):
             opinion = pylesk.simple_lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
             print(tokenized_sentences[i])
             if opinion is not None:
-                print(opinion)
-                print(opinion.definition())
+                print("Simple %s, Definition: %s" % (opinion, opinion.definition()))
+    # Not finished yet on what to return
 
-
-def disambiguate_word_synset_lesk(raw_df):
+def wsd_nltk_lesk(raw_df):
     """This finds the synset of the word using
         the original sentence as context and the
         original lesk algorithm from nltk-package."""
+    df = raw_df
+    full_aspect_synset_list = []
+    full_aspect_synset_list_definition = []
+    aspect_synset_list_definition = []
+    aspect_synset_list = []
+    opinion_synset_list = []
+    opinion_synset_list_definition = []
+    full_opinion_synset_list = []
+    full_opinion_synset_list_definition = []
+    aspect_opinion = ["aspect_tags", "opinion_tags"]
     tokenized_sentences = raw_df["tokenized_sentence"]
     aspect_words = raw_df["aspect_tags"]
-    for i, phrase in enumerate(aspect_words):
-        for word in phrase:
-            aspect = lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
-            print(tokenized_sentences[i])
-            if aspect is not None:
-                print(aspect)
-                print(aspect.definition())
-    opinion_words = raw_df["opinion_tags"]
-    for i, phrase in enumerate(opinion_words):
-        for word in phrase:
-            opinion = lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
-            print(tokenized_sentences[i])
-            if opinion is not None:
-                print(opinion)
-                print(opinion.definition())
+
+    for opinion_list in aspect_opinion:
+        for i, phrase in enumerate(df[opinion_list]):
+            for word in phrase:
+                aspect = lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+                if aspect is not None:
+                    if opinion_list is "aspect_tags":
+                        aspect_synset_list.append(aspect)
+                        aspect_synset_list_definition.append(aspect.definition())
+                    else:
+                        opinion_synset_list.append(aspect)
+                        opinion_synset_list_definition.append(aspect.definition())
+            if opinion_list is "aspect_tags":
+                full_aspect_synset_list.append(aspect_synset_list)
+                full_aspect_synset_list_definition.append(aspect_synset_list_definition)
+                aspect_synset_list = []
+                aspect_synset_list_definition = []
+            else:
+                full_opinion_synset_list.append(opinion_synset_list)
+                full_opinion_synset_list_definition.append(opinion_synset_list_definition)
+                opinion_synset_list = []
+                opinion_synset_list_definition = []
+    df_aspect_list = pd.Series(full_aspect_synset_list)
+    df_aspect_definition_list = pd.Series(full_aspect_synset_list_definition)
+    df["nltk_lesk_aspect_synset"] = df_aspect_list.values
+    df["nltk_lesk_aspect_definition"] = df_aspect_definition_list.values
+    df["nltk_lesk_opinion_synset"] = pd.Series(full_opinion_synset_list).values
+    df["nltk_lesk_opinion_definition"] = pd.Series(full_opinion_synset_list_definition).values
+    return df
 
 
 def tokenize_sentences(raw_df):
@@ -193,7 +241,10 @@ def main(raw_df, name):
     logging.debug("Entering main")
     df = raw_df
     df = tokenize_sentences(df)
-    disambiguate_word_synset_pywsdlesk(df)
+    df = wsd_nltk_lesk(df)
+    save_file(df, name + "_WORDNET_WSD")
+    # wsd_pywsd_simple_lesk(df)
+    # wsd_pywsd_adapted_lesk(df)
     # find_synonyms(df)
 
 if __name__ == '__main__':
