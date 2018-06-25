@@ -6,6 +6,7 @@ import pandas as pd
 import csv
 from nltk.corpus import wordnet as wn
 from nltk.wsd import lesk
+import pywsd.lesk as pylesk
 import ast
 import nltk
 
@@ -109,8 +110,39 @@ def find_wordnet_pos(pos_tag):
         return wn.ADJ
     elif pos_tag == "RB":
         return wn.ADV
+    elif pos_tag == "VB":
+        return wn.VERB
     else:
-        return ''
+        # If the word is not found, it is assumed to be a noun.
+        return wn.NOUN
+
+
+def disambiguate_word_synset_pywsdlesk(raw_df):
+    """This finds the synset of the word using
+        the original sentence as context and the
+        lesk algorithms from pywsd-package."""
+    wn_lemmas = set(wn.all_lemma_names())
+    tokenized_sentences = raw_df["original_text"]
+    aspect_words = raw_df["aspect_tags"]
+    for i, phrase in enumerate(aspect_words):
+        for word in phrase:
+            aspect = None
+            wn_check = []
+            wn_check = wn.synsets(word[0], pos=find_wordnet_pos(word[1]))
+            if len(wn_check) > 0:
+                aspect = pylesk.simple_lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+            print("Aspect word: %s" % (word[0]))
+            if aspect is not None:
+                print("%s, Definition: %s" % (aspect, aspect.definition()))
+            print(tokenized_sentences[i])
+    opinion_words = raw_df["opinion_tags"]
+    for i, phrase in enumerate(opinion_words):
+        for word in phrase:
+            opinion = pylesk.simple_lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+            print(tokenized_sentences[i])
+            if opinion is not None:
+                print(opinion)
+                print(opinion.definition())
 
 
 def disambiguate_word_synset_lesk(raw_df):
@@ -161,7 +193,7 @@ def main(raw_df, name):
     logging.debug("Entering main")
     df = raw_df
     df = tokenize_sentences(df)
-    disambiguate_word_synset_lesk(df)
+    disambiguate_word_synset_pywsdlesk(df)
     # find_synonyms(df)
 
 if __name__ == '__main__':
