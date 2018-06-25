@@ -1,9 +1,11 @@
 import logging
+from timeit import default_timer as timer
 import os
 import sys
 import pandas as pd
 import csv
 from nltk.corpus import wordnet as wn
+from nltk.wsd import lesk
 import ast
 import nltk
 
@@ -21,6 +23,7 @@ def open_file(file, type):
         raw_table['opinion'] = raw_table['opinion'].map(ast.literal_eval)
         raw_table['opinion_tags'] = raw_table['opinion_tags'].map(ast.literal_eval)
         raw_table['aspect_tags'] = raw_table['aspect_tags'].map(ast.literal_eval)
+        raw_table['original_lemmas'] = raw_table['original_lemmas'].map(ast.literal_eval)
     return raw_table
 
 
@@ -74,20 +77,22 @@ def find_wordnet_synonyms(word, pos_tag):
         # Synsets are built by grouping synonyms
         # together.
         for similar in original_words:
-            print("Original: %s similar: %s similarity %s" % (original_words[0], similar, original_words[0].jcn_similarity(similar)))
+            print("Original: %s similar: %s similarity %s" % (original_words[0], similar, original_words[0].wup_similarity(similar)))
         print("Hyponyms")
         # Hyponym is a more specific version of the word. E.g. mouse's hyponym
         # can be field_mouse
         for word in original_words:
-            # Makes no sense to calculate this, as it's always 0.5 due to their distance
+            # Makes no sense to calculate this with path, as it's always 0.5 due to their distance
             for hypowords in word.hyponyms():
-                print("Original: %s similar: %s similarity %s" % (word, hypowords, word.path_similarity(hypowords)))
-            print("Original: %s hyponym: %s" % (word, word.hyponyms()))
+                print("Original: %s hyponym: %s similarity %s" % (word, hypowords, word.wup_similarity(hypowords)))
+            print("Original: %s hyponyms: %s" % (word, word.hyponyms()))
         print("Hypernyms")
         # Hypernym is a more generic term for the word. E.g. mouse's hypernym
         # is a rodent.
         for word in original_words:
-            print("Original: %s hypernyms: %s" % (word, word.hypernyms()))
+            for hypewords in word.hypernyms():
+                print("Original: %s hypernym: %s similarity %s" % (word, hypewords, word.wup_similarity(hypewords)))
+            print("Original: %s hypernym: %s" % (word, word.hypernyms()))
         print("Similar to")
         # This only works with adjectives, as nouns do not have such relations
         for word in original_words:
@@ -107,10 +112,57 @@ def find_wordnet_pos(pos_tag):
     else:
         return ''
 
+
+def disambiguate_word_synset_lesk(raw_df):
+    """This finds the synset of the word using
+        the original sentence as context and the
+        original lesk algorithm from nltk-package."""
+    tokenized_sentences = raw_df["tokenized_sentence"]
+    aspect_words = raw_df["aspect_tags"]
+    for i, phrase in enumerate(aspect_words):
+        for word in phrase:
+            aspect = lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+            print(tokenized_sentences[i])
+            if aspect is not None:
+                print(aspect)
+                print(aspect.definition())
+    opinion_words = raw_df["opinion_tags"]
+    for i, phrase in enumerate(opinion_words):
+        for word in phrase:
+            opinion = lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+            print(tokenized_sentences[i])
+            if opinion is not None:
+                print(opinion)
+                print(opinion.definition())
+
+
+def tokenize_sentences(raw_df):
+    """This tokenizes the sentences, with
+    every word being a token from a sentence."""
+    start = timer()
+    df = raw_df
+    spacy_tagged_sentence = df["original_lemmas"]
+    tokenized_sentences = []
+    sentence = []
+    for i, phrase in enumerate(df["aspect"]):
+        for words in spacy_tagged_sentence[i]:
+            if len(words) != 0:
+                sentence.append(words[0])
+        tokenized_sentences.append(sentence)
+        sentence = []
+    tokenized_series = pd.Series(tokenized_sentences)
+    df["tokenized_sentence"] = tokenized_series.values
+    end = timer()
+    logging.debug("Time: %.2f seconds" % (end - start))
+    return df
+
+
 def main(raw_df, name):
     logging.debug("Entering main")
     df = raw_df
-    find_synonyms(df)
+    df = tokenize_sentences(df)
+    disambiguate_word_synset_lesk(df)
+    # find_synonyms(df)
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
