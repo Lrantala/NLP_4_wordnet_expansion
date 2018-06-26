@@ -143,44 +143,53 @@ def wsd_lesk(raw_df, algorithm_choice):
 
     for opinion_list in aspect_opinion:
         for i, phrase in enumerate(df[opinion_list]):
+            multiple_word_found = False
             for j, word in enumerate(phrase):
-                aspect = None
-                wn_check = []
-                multiple_word_found = False
-                if len(phrase) >= 2:
-                    k = 0
-                    temporary_combined_word = []
-                    while k < len(phrase):
-                        temporary_combined_word.append(phrase[k][0])
-                        k += 1
-                    combined_word_string = '_'.join(temporary_combined_word)
-                    wn_check = wn.synsets(combined_word_string, pos=find_wordnet_pos(word[k][1]))
-                    multiple_word_found = True
-                if len(wn_check) == 0:
-                    wn_check = wn.synsets(word[0], pos=find_wordnet_pos(word[1]))
-                    multiple_word_found = False
-                if len(wn_check) > 0:
-                    if algorithm_choice == 1:
-                        if multiple_word_found is True:
-                            aspect = lesk(tokenized_sentences[i], combined_word_string, find_wordnet_pos(word[1]))
-                        else:
-                            aspect = lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
-                    if algorithm_choice == 2:
-                        if multiple_word_found is True:
-                            aspect = pylesk.simple_lesk(non_tokenized_sentences[i], combined_word_string, find_wordnet_pos(word[1]))
-                        else:
-                            aspect = pylesk.simple_lesk(non_tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
-                    if algorithm_choice == 3:
-                        aspect = pylesk.adapted_lesk(non_tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
-                    if algorithm_choice == 4:
-                        aspect = pylesk.cosine_lesk(non_tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
-                    if aspect is not None:
-                        if opinion_list is "aspect_tags":
-                            aspect_synset_list.append(aspect)
-                            aspect_synset_list_definition.append(aspect.definition())
-                        else:
-                            opinion_synset_list.append(aspect)
-                            opinion_synset_list_definition.append(aspect.definition())
+                if multiple_word_found is False:
+                    aspect = None
+                    wn_check = []
+                    if len(phrase) >= 2:
+                        k = 0
+                        temporary_combined_word = []
+                        while k < len(phrase):
+                            temporary_combined_word.append(phrase[k][0])
+                            k += 1
+                        combined_word_string = '_'.join(temporary_combined_word)
+                        wn_check = wn.synsets(combined_word_string, pos=find_wordnet_pos(word[k][1]))
+                        multiple_word_found = True
+                    if len(wn_check) == 0:
+                        wn_check = wn.synsets(word[0], pos=find_wordnet_pos(word[1]))
+                        multiple_word_found = False
+                    if len(wn_check) > 0:
+                        if algorithm_choice == 1:
+                            if multiple_word_found is True:
+                                aspect = lesk(tokenized_sentences[i], combined_word_string, find_wordnet_pos(word[1]))
+                            else:
+                                aspect = lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+                        if algorithm_choice == 2:
+                            if multiple_word_found is True:
+                                aspect = pylesk.simple_lesk(non_tokenized_sentences[i], combined_word_string, find_wordnet_pos(word[1]))
+                            else:
+                                aspect = pylesk.simple_lesk(non_tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+                        if algorithm_choice == 3:
+                            if multiple_word_found is True:
+                                aspect = pylesk.adapted_lesk(non_tokenized_sentences[i], combined_word_string,
+                                                             find_wordnet_pos(word[1]))
+                            else:
+                                aspect = pylesk.adapted_lesk(non_tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+                        if algorithm_choice == 4:
+                            if multiple_word_found is True:
+                                aspect = pylesk.cosine_lesk(non_tokenized_sentences[i], combined_word_string,
+                                                            find_wordnet_pos(word[1]))
+                            else:
+                                aspect = pylesk.cosine_lesk(non_tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+                        if aspect is not None:
+                            if opinion_list is "aspect_tags":
+                                aspect_synset_list.append(aspect)
+                                aspect_synset_list_definition.append(aspect.definition())
+                            else:
+                                opinion_synset_list.append(aspect)
+                                opinion_synset_list_definition.append(aspect.definition())
             if opinion_list is "aspect_tags":
                 full_aspect_synset_list.append(aspect_synset_list)
                 full_aspect_synset_list_definition.append(aspect_synset_list_definition)
