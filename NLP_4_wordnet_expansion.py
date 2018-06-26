@@ -143,15 +143,33 @@ def wsd_lesk(raw_df, algorithm_choice):
 
     for opinion_list in aspect_opinion:
         for i, phrase in enumerate(df[opinion_list]):
-            for word in phrase:
+            for j, word in enumerate(phrase):
                 aspect = None
                 wn_check = []
-                wn_check = wn.synsets(word[0], pos=find_wordnet_pos(word[1]))
+                multiple_word_found = False
+                if len(phrase) >= 2:
+                    k = 0
+                    temporary_combined_word = []
+                    while k < len(phrase):
+                        temporary_combined_word.append(phrase[k][0])
+                        k += 1
+                    combined_word_string = '_'.join(temporary_combined_word)
+                    wn_check = wn.synsets(combined_word_string, pos=find_wordnet_pos(word[k][1]))
+                    multiple_word_found = True
+                if len(wn_check) == 0:
+                    wn_check = wn.synsets(word[0], pos=find_wordnet_pos(word[1]))
+                    multiple_word_found = False
                 if len(wn_check) > 0:
                     if algorithm_choice == 1:
-                        aspect = lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+                        if multiple_word_found is True:
+                            aspect = lesk(tokenized_sentences[i], combined_word_string, find_wordnet_pos(word[1]))
+                        else:
+                            aspect = lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
                     if algorithm_choice == 2:
-                        aspect = pylesk.simple_lesk(non_tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+                        if multiple_word_found is True:
+                            aspect = pylesk.simple_lesk(non_tokenized_sentences[i], combined_word_string, find_wordnet_pos(word[1]))
+                        else:
+                            aspect = pylesk.simple_lesk(non_tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
                     if algorithm_choice == 3:
                         aspect = pylesk.adapted_lesk(non_tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
                     if algorithm_choice == 4:
@@ -180,6 +198,12 @@ def wsd_lesk(raw_df, algorithm_choice):
     end = timer()
     logging.debug("WSD Lesk Time: %.2f seconds" % (end - start))
     return df
+
+
+def combine_aspect_words(raw_df):
+    """This combines the aspect words
+    to single terms, e.g. 'memory, 'chip'
+    becomes 'memory chip'."""
 
 
 def tokenize_sentences(raw_df):
