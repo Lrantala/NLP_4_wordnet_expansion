@@ -55,7 +55,7 @@ def read_folder_contents(path_to_files):
 
 def find_synonyms(raw_df):
     # This defines the lists that are sent to the wordnet synonym search
-    lists_of_words = ["aspect_tags"]
+    lists_of_words = ["nltk_lesk_aspect_synset"]
     list_of_list_of_synonyms = []
     for i, phrase in enumerate(df["aspect"]):
         list_of_synonyms = []
@@ -63,10 +63,32 @@ def find_synonyms(raw_df):
             if len(df[words][i]) != 0:
                 k = 0
                 while k < len(df[words][i]):
-                    name = df[words][i][k][0]
-                    wn_tag = find_wordnet_pos(df[words][i][k][1])
-                    find_wordnet_synonyms(name, wn_tag)
-                    k+=1
+                    find_wordnet_synonyms_nouns(df[words][i][k])
+                    k += 1
+            #     k = 0
+                # while k < len(df[words][i]):
+                #     name = df[words][i][k][0]
+                #     wn_tag = find_wordnet_pos(df[words][i][k][1])
+                #     find_wordnet_synonyms(name, wn_tag)
+                #     k+=1
+
+
+def find_wordnet_synonyms_nouns(noun_synset):
+    original_synset = noun_synset
+    print("Original: %s" % (original_synset))
+    # This is for the synonyms from this exact synset.
+    for synonym in original_synset.lemmas():
+        print("Synonym: %s" % (synonym))
+
+    # This is for the hyponyms (more exact terms)
+    # from this exact synset.
+    for hyponym in original_synset.hyponyms():
+        print("Original: %s hyponym: %s similarity %s" % (original_synset, hyponym, original_synset.wup_similarity(hyponym)))
+
+    # This is for the hypernyms (more general terms)
+    # from this exact synset.
+    for hypernym in original_synset.hypernyms():
+        print("Original: %s hypernym: %s similarity %s" % (original_synset, hypernym, original_synset.wup_similarity(hypernym)))
 
 def find_wordnet_synonyms(word, pos_tag):
     """This finds the synonyms from wordnet and calculates their similarity."""
@@ -209,12 +231,6 @@ def wsd_lesk(raw_df, algorithm_choice):
     return df
 
 
-def combine_aspect_words(raw_df):
-    """This combines the aspect words
-    to single terms, e.g. 'memory, 'chip'
-    becomes 'memory chip'."""
-
-
 def tokenize_sentences(raw_df):
     """This tokenizes the sentences, with
     every word being a token from a sentence."""
@@ -251,8 +267,10 @@ def main(raw_df, name):
     df = wsd_lesk(df, 2)
     df = wsd_lesk(df, 3)
     df = wsd_lesk(df, 4)
-    df = reformat_output_file(df)
-    save_file(df, name + "_WORDNET_WSD")
+    find_synonyms(df)
+
+    # df = reformat_output_file(df)
+    # save_file(df, name + "_WORDNET_WSD")
     # wsd_pywsd_simple_lesk(df)
     # wsd_pywsd_adapted_lesk(df)
     # find_synonyms(df)
