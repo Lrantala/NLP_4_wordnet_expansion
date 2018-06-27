@@ -76,19 +76,51 @@ def find_synonyms(raw_df):
 def find_wordnet_synonyms_nouns(noun_synset):
     original_synset = noun_synset
     print("Original: %s" % (original_synset))
-    # This is for the synonyms from this exact synset.
-    for synonym in original_synset.lemmas():
-        print("Synonym: %s" % (synonym))
 
-    # This is for the hyponyms (more exact terms)
-    # from this exact synset.
-    for hyponym in original_synset.hyponyms():
-        print("Original: %s hyponym: %s similarity %s" % (original_synset, hyponym, original_synset.wup_similarity(hyponym)))
+    # This is for the synonym words from this exact synset.
+    for synonym_word in original_synset.lemmas():
+        print("Original: %s synonym: %s" % (
+        original_synset, synonym_word))
 
-    # This is for the hypernyms (more general terms)
-    # from this exact synset.
-    for hypernym in original_synset.hypernyms():
-        print("Original: %s hypernym: %s similarity %s" % (original_synset, hypernym, original_synset.wup_similarity(hypernym)))
+    # This is for the synonym synsets that compare
+    # against the original synset.
+    for synonym_synset in wn.synsets(original_synset.lemma_names()[0], original_synset.pos()):
+        # print(synonym)
+        print("Original: %s other synset words: %s similarity %s" % (
+            original_synset, synonym_synset, original_synset.wup_similarity(synonym_synset)))
+
+    # This part deals with nouns and their related
+    # synsets.
+    if original_synset.pos() == "n":
+
+        # This is for the hyponyms (more exact terms)
+        # from this exact synset.
+        for hyponym in original_synset.hyponyms():
+            print("Original: %s hyponym: %s similarity %s" % (original_synset, hyponym, original_synset.wup_similarity(hyponym)))
+
+        # This is for the hypernyms (more general terms)
+        # from this exact synset.
+        for hypernym in original_synset.hypernyms():
+            print("Original: %s hypernym: %s similarity %s" % (original_synset, hypernym, original_synset.wup_similarity(hypernym)))
+
+    # This part deals with adjectives, that
+    # have different relations than nouns.
+    elif original_synset.pos() == "a":
+
+        # This is for antonyms (opposites e.g. dry-wet), it
+        # loops through all synonyms, although antonym seems
+        # to be assigned only to the first for the set.
+        for synonym in original_synset.lemmas():
+            for antonym in synonym.antonyms():
+                print("Original: %s antonym: %s" % (
+                    synonym, antonym))
+
+        # This is for similar adjectives, which are
+        # also called satellites:
+        # https://wordnet.princeton.edu/documentation/wngloss7wn
+        for similar in original_synset.similar_tos():
+            print("Original: %s satellite_adjective: %s" % (
+                original_synset, similar))
 
 def find_wordnet_synonyms(word, pos_tag):
     """This finds the synonyms from wordnet and calculates their similarity."""
@@ -102,27 +134,7 @@ def find_wordnet_synonyms(word, pos_tag):
         for similar in original_words:
             print("Original: %s similar: %s similarity %s" % (original_words[0], similar, original_words[0].wup_similarity(similar)))
         print("Hyponyms")
-        # Hyponym is a more specific version of the word. E.g. mouse's hyponym
-        # can be field_mouse
-        for word in original_words:
-            # Makes no sense to calculate this with path, as it's always 0.5 due to their distance
-            for hypowords in word.hyponyms():
-                print("Original: %s hyponym: %s similarity %s" % (word, hypowords, word.wup_similarity(hypowords)))
-            print("Original: %s hyponyms: %s" % (word, word.hyponyms()))
-        print("Hypernyms")
-        # Hypernym is a more generic term for the word. E.g. mouse's hypernym
-        # is a rodent.
-        for word in original_words:
-            for hypewords in word.hypernyms():
-                print("Original: %s hypernym: %s similarity %s" % (word, hypewords, word.wup_similarity(hypewords)))
-            print("Original: %s hypernym: %s" % (word, word.hypernyms()))
-        print("Similar to")
-        # This only works with adjectives, as nouns do not have such relations
-        for word in original_words:
-            # This gives always None as similarity.
-            # for similar_words in word.similar_tos():
-            #     print("Original: %s similar: %s similarity %s" % (word, similar_words, word.path_similarity(similar_words)))
-            print("Original: %s similar_to: %s" % (word, word.similar_tos()))
+
 
 def find_wordnet_pos(pos_tag):
     """This finds and returns the Wordnet version of a POS tag that is given to it."""
