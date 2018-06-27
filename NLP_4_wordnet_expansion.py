@@ -87,7 +87,7 @@ def find_wordnet_synonyms_nouns(noun_synset):
     for synonym_synset in wn.synsets(original_synset.lemma_names()[0], original_synset.pos()):
         # print(synonym)
         print("Original: %s other synset words: %s similarity %s" % (
-            original_synset, synonym_synset, original_synset.wup_similarity(synonym_synset)))
+            original_synset, synonym_synset, original_synset.lch_similarity(synonym_synset)))
 
     # This part deals with nouns and their related
     # synsets.
@@ -96,12 +96,12 @@ def find_wordnet_synonyms_nouns(noun_synset):
         # This is for the hyponyms (more exact terms)
         # from this exact synset.
         for hyponym in original_synset.hyponyms():
-            print("Original: %s hyponym: %s similarity %s" % (original_synset, hyponym, original_synset.wup_similarity(hyponym)))
+            print("Original: %s hyponym: %s similarity %s" % (original_synset, hyponym, original_synset.lch_similarity(hyponym)))
 
         # This is for the hypernyms (more general terms)
         # from this exact synset.
         for hypernym in original_synset.hypernyms():
-            print("Original: %s hypernym: %s similarity %s" % (original_synset, hypernym, original_synset.wup_similarity(hypernym)))
+            print("Original: %s hypernym: %s similarity %s" % (original_synset, hypernym, original_synset.lch_similarity(hypernym)))
 
     # This part deals with adjectives, that
     # have different relations than nouns.
@@ -121,19 +121,6 @@ def find_wordnet_synonyms_nouns(noun_synset):
         for similar in original_synset.similar_tos():
             print("Original: %s satellite_adjective: %s" % (
                 original_synset, similar))
-
-def find_wordnet_synonyms(word, pos_tag):
-    """This finds the synonyms from wordnet and calculates their similarity."""
-    if pos_tag is not None:
-        original_words = wn.synsets(word, pos_tag)
-    if len(original_words) != 0:
-        # print(original_word[0])
-        print("Original synset")
-        # Synsets are built by grouping synonyms
-        # together.
-        for similar in original_words:
-            print("Original: %s similar: %s similarity %s" % (original_words[0], similar, original_words[0].wup_similarity(similar)))
-        print("Hyponyms")
 
 
 def find_wordnet_pos(pos_tag):
