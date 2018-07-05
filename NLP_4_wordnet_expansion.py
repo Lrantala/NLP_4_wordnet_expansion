@@ -86,26 +86,43 @@ def find_wordnet_synonyms_nouns(noun_synset):
     # against the original synset.
     for synonym_synset in wn.synsets(original_synset.lemma_names()[0], original_synset.pos()):
         # print(synonym)
-        print("Original: %s other synset words: %s similarity %s" % (
-            original_synset, synonym_synset, original_synset.lch_similarity(synonym_synset)))
+        if (original_synset != synonym_synset) and (original_synset.lch_similarity(synonym_synset) >= 1):
+            print("Original: %s other synset words: %s LCH-similarity %s" % (
+                original_synset, synonym_synset, original_synset.lch_similarity(synonym_synset)))
+            if original_synset.pos() == "n":
+                for nested_hyponym_synset in synonym_synset.hyponyms():
+                    print("Original: %s nested_hyponym words: %s LCH-similarity %s" % (original_synset, nested_hyponym_synset, original_synset.lch_similarity(nested_hyponym_synset)))
+
+                # This iterates first to a higher level, e.g. from Synset computer.n.01
+                # to machine.n.01, and then over all the hypernyms from machine.n.01.
+                # This doesn't make sense at this level, as it produces too much noise
+                # and all the distances are always the same.
+                # for hypernym_synset in original_synset.hypernyms():
+                #     print("Original: %s nested_hypernym words: %s LCH-similarity %s" % (original_synset, hypernym_synset, original_synset.lch_similarity(hypernym_synset)))
+                #     for nested_synonym_synset in hypernym_synset.hyponyms():
+                    #     print("Hypernym: %s nested_synonym synset: %s LCH (original&nested) %s" % (hypernym_synset, nested_synonym_synset, original_synset.lch_similarity(nested_synonym_synset)))
+        # print("Original: %s other synset words: %s WUP-similarity %s" % (
+        #     original_synset, synonym_synset, original_synset.wup_similarity(synonym_synset)))
 
     # This part deals with nouns and their related
     # synsets.
-    if original_synset.pos() == "n":
+    # if original_synset.pos() == "n":
 
         # This is for the hyponyms (more exact terms)
         # from this exact synset.
-        for hyponym in original_synset.hyponyms():
-            print("Original: %s hyponym: %s similarity %s" % (original_synset, hyponym, original_synset.lch_similarity(hyponym)))
+        # for hyponym in original_synset.hyponyms():
+        #     print("Original: %s hyponym: %s" % (original_synset, hyponym))
+            # print("Original: %s hyponym: %s similarity %s" % (original_synset, hyponym, original_synset.lch_similarity(hyponym)))
 
         # This is for the hypernyms (more general terms)
         # from this exact synset.
-        for hypernym in original_synset.hypernyms():
-            print("Original: %s hypernym: %s similarity %s" % (original_synset, hypernym, original_synset.lch_similarity(hypernym)))
+        # for hypernym in original_synset.hypernyms():
+        #     print("Original: %s hypernym: %s" % (original_synset, hypernym))
+            # print("Original: %s hypernym: %s similarity %s" % (original_synset, hypernym, original_synset.lch_similarity(hypernym)))
 
     # This part deals with adjectives, that
     # have different relations than nouns.
-    elif original_synset.pos() == "a":
+    if original_synset.pos() == "a":
 
         # This is for antonyms (opposites e.g. dry-wet), it
         # loops through all synonyms, although antonym seems
