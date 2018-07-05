@@ -86,13 +86,16 @@ def find_wordnet_synonyms_nouns(noun_synset):
     # against the original synset.
     for synonym_synset in wn.synsets(original_synset.lemma_names()[0], original_synset.pos()):
         # print(synonym)
-        if (original_synset != synonym_synset) and (original_synset.lch_similarity(synonym_synset) >= 1):
-            print("Original: %s other synset words: %s LCH-similarity %s" % (
+        if (original_synset != synonym_synset) and (original_synset.lch_similarity(synonym_synset) >= 2):
+            print("Original: %s other synsets: %s LCH-similarity %s" % (
                 original_synset, synonym_synset, original_synset.lch_similarity(synonym_synset)))
             if original_synset.pos() == "n":
                 for nested_hyponym_synset in synonym_synset.hyponyms():
-                    print("Original: %s nested_hyponym words: %s LCH-similarity %s" % (original_synset, nested_hyponym_synset, original_synset.lch_similarity(nested_hyponym_synset)))
-
+                    if original_synset.lch_similarity(nested_hyponym_synset) >= 2:
+                        print("Other synset: %s nested_hyponym words: %s LCH(original) %s" % (synonym_synset, nested_hyponym_synset, original_synset.lch_similarity(nested_hyponym_synset)))
+                        for double_nested_hyponym_synset in nested_hyponym_synset.hyponyms():
+                            print("Hypernym: %s double_nested_hyponym words: %s LCH(original) %s" % (
+                            nested_hyponym_synset, double_nested_hyponym_synset, original_synset.lch_similarity(double_nested_hyponym_synset)))
                 # This iterates first to a higher level, e.g. from Synset computer.n.01
                 # to machine.n.01, and then over all the hypernyms from machine.n.01.
                 # This doesn't make sense at this level, as it produces too much noise
