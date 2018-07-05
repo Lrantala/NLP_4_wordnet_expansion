@@ -63,7 +63,7 @@ def find_synonyms(raw_df):
             if len(df[words][i]) != 0:
                 k = 0
                 while k < len(df[words][i]):
-                    find_wordnet_synonyms_nouns(df[words][i][k])
+                    synonyms = find_wordnet_synonyms_nouns(df[words][i][k])
                     k += 1
             #     k = 0
                 # while k < len(df[words][i]):
@@ -75,6 +75,7 @@ def find_synonyms(raw_df):
 
 def find_wordnet_synonyms_nouns(noun_synset):
     original_synset = noun_synset
+    synonym_words = []
     print("Original: %s" % (original_synset))
 
     # This is for the synonym words from this exact synset.
@@ -87,15 +88,21 @@ def find_wordnet_synonyms_nouns(noun_synset):
     for synonym_synset in wn.synsets(original_synset.lemma_names()[0], original_synset.pos()):
         # print(synonym)
         if (original_synset != synonym_synset) and (original_synset.lch_similarity(synonym_synset) >= 2):
+            if synonym_synset.lemma_names()[0] not in synonym_words:
+                synonym_words.append(synonym_synset.lemma_names()[0])
             print("Original: %s other synsets: %s LCH-similarity %s" % (
                 original_synset, synonym_synset, original_synset.lch_similarity(synonym_synset)))
             if original_synset.pos() == "n":
                 for nested_hyponym_synset in synonym_synset.hyponyms():
                     if original_synset.lch_similarity(nested_hyponym_synset) >= 2:
                         print("Other synset: %s nested_hyponym words: %s LCH(original) %s" % (synonym_synset, nested_hyponym_synset, original_synset.lch_similarity(nested_hyponym_synset)))
-                        for double_nested_hyponym_synset in nested_hyponym_synset.hyponyms():
-                            print("Hypernym: %s double_nested_hyponym words: %s LCH(original) %s" % (
-                            nested_hyponym_synset, double_nested_hyponym_synset, original_synset.lch_similarity(double_nested_hyponym_synset)))
+                        # Here has to append also to the synonym_words-list.
+
+                        # This goes into the hyponyms of hyponyms, seems too deep for now.
+                        # for double_nested_hyponym_synset in nested_hyponym_synset.hyponyms():
+                        #     print("Hypernym: %s double_nested_hyponym words: %s LCH(original) %s" % (
+                        #     nested_hyponym_synset, double_nested_hyponym_synset, original_synset.lch_similarity(double_nested_hyponym_synset)))
+
                 # This iterates first to a higher level, e.g. from Synset computer.n.01
                 # to machine.n.01, and then over all the hypernyms from machine.n.01.
                 # This doesn't make sense at this level, as it produces too much noise
@@ -106,22 +113,6 @@ def find_wordnet_synonyms_nouns(noun_synset):
                     #     print("Hypernym: %s nested_synonym synset: %s LCH (original&nested) %s" % (hypernym_synset, nested_synonym_synset, original_synset.lch_similarity(nested_synonym_synset)))
         # print("Original: %s other synset words: %s WUP-similarity %s" % (
         #     original_synset, synonym_synset, original_synset.wup_similarity(synonym_synset)))
-
-    # This part deals with nouns and their related
-    # synsets.
-    # if original_synset.pos() == "n":
-
-        # This is for the hyponyms (more exact terms)
-        # from this exact synset.
-        # for hyponym in original_synset.hyponyms():
-        #     print("Original: %s hyponym: %s" % (original_synset, hyponym))
-            # print("Original: %s hyponym: %s similarity %s" % (original_synset, hyponym, original_synset.lch_similarity(hyponym)))
-
-        # This is for the hypernyms (more general terms)
-        # from this exact synset.
-        # for hypernym in original_synset.hypernyms():
-        #     print("Original: %s hypernym: %s" % (original_synset, hypernym))
-            # print("Original: %s hypernym: %s similarity %s" % (original_synset, hypernym, original_synset.lch_similarity(hypernym)))
 
     # This part deals with adjectives, that
     # have different relations than nouns.
@@ -141,6 +132,7 @@ def find_wordnet_synonyms_nouns(noun_synset):
         for similar in original_synset.similar_tos():
             print("Original: %s satellite_adjective: %s" % (
                 original_synset, similar))
+    return synonym_words
 
 
 def find_wordnet_pos(pos_tag):
