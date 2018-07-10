@@ -57,14 +57,22 @@ def find_synonyms(raw_df):
     # This defines the lists that are sent to the wordnet synonym search
     lists_of_words = ["nltk_lesk_aspect_synset"]
     list_of_list_of_synonyms = []
-    for i, phrase in enumerate(df["aspect"]):
+    for i, phrase in enumerate(raw_df["aspect"]):
         list_of_synonyms = []
+        synonyms = []
         for words in lists_of_words:
-            if len(df[words][i]) != 0:
+            if len(raw_df[words][i]) != 0:
                 k = 0
-                while k < len(df[words][i]):
-                    synonyms = find_wordnet_synonyms_nouns(df[words][i][k])
+                while k < len(raw_df[words][i]):
+                    synonyms.append(find_wordnet_synonyms_nouns(raw_df[words][i][k]))
                     k += 1
+            if len(synonyms) == 1:
+                list_of_synonyms.append(*synonyms)
+            if len(synonyms) > 1:
+                for synoword in synonyms:
+                    list_of_synonyms.append(synoword)
+            print(raw_df[words][i])
+            print(list_of_synonyms)
             #     k = 0
                 # while k < len(df[words][i]):
                 #     name = df[words][i][k][0]
@@ -79,22 +87,25 @@ def find_wordnet_synonyms_nouns(noun_synset):
     print("Original: %s" % (original_synset))
 
     # This is for the synonym words from this exact synset.
-    for synonym_word in original_synset.lemmas():
+    for synonym_word in original_synset.lemma_names():
         print("Original: %s synonym: %s" % (
         original_synset, synonym_word))
+        if synonym_word != original_synset.lemma_names()[0]:
+            synonym_words.append(synonym_word)
 
     # This is for the synonym synsets that compare
     # against the original synset.
     for synonym_synset in wn.synsets(original_synset.lemma_names()[0], original_synset.pos()):
         # print(synonym)
-        if (original_synset != synonym_synset) and (original_synset.lch_similarity(synonym_synset) >= 2):
+        if (original_synset != synonym_synset) and (original_synset.lch_similarity(synonym_synset) >= 2.25):
             if synonym_synset.lemma_names()[0] not in synonym_words:
                 synonym_words.append(synonym_synset.lemma_names()[0])
             print("Original: %s other synsets: %s LCH-similarity %s" % (
                 original_synset, synonym_synset, original_synset.lch_similarity(synonym_synset)))
             if original_synset.pos() == "n":
                 for nested_hyponym_synset in synonym_synset.hyponyms():
-                    if original_synset.lch_similarity(nested_hyponym_synset) >= 2:
+                    if original_synset.lch_similarity(nested_hyponym_synset) >= 2.25:
+                        synonym_words.append(nested_hyponym_synset.lemma_names()[0])
                         print("Other synset: %s nested_hyponym words: %s LCH(original) %s" % (synonym_synset, nested_hyponym_synset, original_synset.lch_similarity(nested_hyponym_synset)))
                         # Here has to append also to the synonym_words-list.
 
