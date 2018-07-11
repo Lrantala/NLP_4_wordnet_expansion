@@ -56,13 +56,15 @@ def read_folder_contents(path_to_files):
 def find_synonyms(raw_df):
     start = timer()
     # This defines the lists that are sent to the wordnet synonym search
-    lists_of_words = ["nltk_lesk_aspect_synset"]
-    full_list_of_synonyms = []
+    lists_of_words = ["nltk_lesk_aspect_synset", "nltk_lesk_opinion_synset"]
+    full_list_of_aspect_synonyms = []
+    full_list_of_opinion_synonyms = []
     df_list_of_synonyms = pd.DataFrame()
     for i, phrase in enumerate(raw_df["aspect"]):
-        list_of_synonyms = []
-        synonyms = []
+        list_of_aspect_synonyms = []
+        list_of_opinion_synonyms = []
         for words in lists_of_words:
+            synonyms = []
             if len(raw_df[words][i]) != 0:
                 k = 0
                 while k < len(raw_df[words][i]):
@@ -70,18 +72,30 @@ def find_synonyms(raw_df):
                     k += 1
             if len(synonyms) > 1:
                 for synoword in synonyms:
-                    list_of_synonyms.append(synoword)
+                    if words is "nltk_lesk_aspect_synset":
+                        list_of_aspect_synonyms.append(synoword)
+                    else:
+                        list_of_opinion_synonyms.append(synoword)
             else:
                 if len(synonyms) == 1:
-                    list_of_synonyms.append(*synonyms)
+                    if words is "nltk_lesk_aspect_synset":
+                        list_of_aspect_synonyms.append(*synonyms)
+                    else:
+                        list_of_opinion_synonyms.append(*synonyms)
                 else:
-                    list_of_synonyms.append(synonyms)
+                    if words is "nltk_lesk_aspect_synset":
+                        list_of_aspect_synonyms.append(synonyms)
+                    else:
+                        list_of_opinion_synonyms.append(synonyms)
 
-        print(raw_df[words][i])
         print(raw_df["aspect"][i])
-        print(*list_of_synonyms)
-        full_list_of_synonyms.append(list_of_synonyms)
-    raw_df["aspect_synonyms"] = pd.Series(full_list_of_synonyms).values
+        print(raw_df[words][i])
+        print(list_of_aspect_synonyms)
+        print(list_of_opinion_synonyms)
+        full_list_of_aspect_synonyms.append(list_of_aspect_synonyms)
+        full_list_of_opinion_synonyms.append(list_of_opinion_synonyms)
+    raw_df["aspect_synonyms"] = pd.Series(full_list_of_aspect_synonyms).values
+    raw_df["opinion_synonyms"] = pd.Series(full_list_of_opinion_synonyms).values
     end = timer()
     logging.debug("Find synonyms total: %.2f seconds" % (end - start))
     return raw_df
@@ -108,19 +122,18 @@ def find_wordnet_synonyms_nouns(noun_synset):
 
     # This is for the synonym synsets that compare
     # against the original synset.
-    for synonym_synset in wn.synsets(original_synset.lemma_names()[0], original_synset.pos()):
-        # print(synonym)
-        if (original_synset != synonym_synset) and (original_synset.lch_similarity(synonym_synset) >= 2.25):
-            if synonym_synset.lemma_names()[0] not in synonym_words:
-                synonym_words.append(synonym_synset.lemma_names()[0])
-            print("Original: %s other synsets: %s LCH-similarity %s" % (
-                original_synset, synonym_synset, original_synset.lch_similarity(synonym_synset)))
-            if original_synset.pos() == "n":
+    if original_synset.pos() == "n":
+        for synonym_synset in wn.synsets(original_synset.lemma_names()[0], original_synset.pos()):
+            # print(synonym)
+            if (original_synset != synonym_synset) and (original_synset.lch_similarity(synonym_synset) >= 2.25):
+                if synonym_synset.lemma_names()[0] not in synonym_words:
+                    synonym_words.append(synonym_synset.lemma_names()[0])
+                print("Original: %s other synsets: %s LCH-similarity %s" % (
+                    original_synset, synonym_synset, original_synset.lch_similarity(synonym_synset)))
                 for nested_hyponym_synset in synonym_synset.hyponyms():
                     if original_synset.lch_similarity(nested_hyponym_synset) >= 2.25:
                         synonym_words.append(nested_hyponym_synset.lemma_names()[0])
                         print("Other synset: %s nested_hyponym words: %s LCH(original) %s" % (synonym_synset, nested_hyponym_synset, original_synset.lch_similarity(nested_hyponym_synset)))
-                        # Here has to append also to the synonym_words-list.
 
                         # This goes into the hyponyms of hyponyms, seems too deep for now.
                         # for double_nested_hyponym_synset in nested_hyponym_synset.hyponyms():
@@ -145,10 +158,10 @@ def find_wordnet_synonyms_nouns(noun_synset):
         # This is for antonyms (opposites e.g. dry-wet), it
         # loops through all synonyms, although antonym seems
         # to be assigned only to the first for the set.
-        for synonym in original_synset.lemmas():
-            for antonym in synonym.antonyms():
-                print("Original: %s antonym: %s" % (
-                    synonym, antonym))
+        #     for synonym in original_synset.lemmas():
+        #         for antonym in synonym.antonyms():
+        #             print("Original: %s antonym: %s" % (
+        #                 synonym, antonym))
 
         # This is for similar adjectives, which are
         # also called satellites:
@@ -156,6 +169,7 @@ def find_wordnet_synonyms_nouns(noun_synset):
         for similar in original_synset.similar_tos():
             print("Original: %s satellite_adjective: %s" % (
                 original_synset, similar))
+            synonym_words.append(similar.lemma_names()[0])
     end = timer()
     logging.debug("Wordnet cycle: %.2f seconds" % (end - start))
     return synonym_words
