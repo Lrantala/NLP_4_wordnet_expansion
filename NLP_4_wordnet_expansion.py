@@ -64,29 +64,33 @@ def find_synonyms(raw_df):
         list_of_aspect_synonyms = []
         list_of_opinion_synonyms = []
         for words in lists_of_words:
-            synonyms = []
+            synonyms_all = []
+            synonyms_nouns = []
+            synonyms_common = []
             if len(raw_df[words][i]) != 0:
                 k = 0
                 while k < len(raw_df[words][i]):
-                    synonyms.append(find_wordnet_synonyms_nouns(raw_df[words][i][k]))
+                    synonyms_common.append(find_wordnet_synonyms_all_words(raw_df[words][i][k]))
+                    synonyms_nouns.append(find_wordnet_synonyms_nouns(raw_df[words][i][k]))
+                    synonyms_all = synonyms_common + synonyms_nouns
                     k += 1
-            if len(synonyms) > 1:
-                for synoword in synonyms:
+            if len(synonyms_all) > 1:
+                for synoword in synonyms_all:
                     if words is "nltk_lesk_aspect_synset":
                         list_of_aspect_synonyms.append(synoword)
                     else:
                         list_of_opinion_synonyms.append(synoword)
             else:
-                if len(synonyms) == 1:
+                if len(synonyms_all) == 1:
                     if words is "nltk_lesk_aspect_synset":
-                        list_of_aspect_synonyms.append(*synonyms)
+                        list_of_aspect_synonyms.append(*synonyms_all)
                     else:
-                        list_of_opinion_synonyms.append(*synonyms)
+                        list_of_opinion_synonyms.append(*synonyms_all)
                 else:
                     if words is "nltk_lesk_aspect_synset":
-                        list_of_aspect_synonyms.append(synonyms)
+                        list_of_aspect_synonyms.append(synonyms_all)
                     else:
-                        list_of_opinion_synonyms.append(synonyms)
+                        list_of_opinion_synonyms.append(synonyms_all)
 
         print(raw_df["aspect"][i])
         print(raw_df[words][i])
@@ -107,18 +111,32 @@ def find_synonyms(raw_df):
                 #     k+=1
 
 
-def find_wordnet_synonyms_nouns(noun_synset):
-    start = timer()
-    original_synset = noun_synset
-    synonym_words = []
-    print("Original: %s" % (original_synset))
-
+def find_wordnet_synonyms_all_words(noun_synset):
     # This is for the synonym words from this exact synset.
+    start = timer()
+    synonym_words = []
+    original_synset = noun_synset
     for synonym_word in original_synset.lemma_names():
         print("Original: %s synonym: %s" % (
         original_synset, synonym_word))
         if synonym_word != original_synset.lemma_names()[0]:
             synonym_words.append(synonym_word)
+    end = timer()
+    logging.debug("Find Wordnet(all) cycle: %.2f seconds" % (end - start))
+    return synonym_words
+
+def find_wordnet_synonyms_nouns(noun_synset):
+    start = timer()
+    original_synset = noun_synset
+    synonym_words = []
+    # print("Original: %s" % (original_synset))
+
+    # This is for the synonym words from this exact synset.
+    # for synonym_word in original_synset.lemma_names():
+    #     print("Original: %s synonym: %s" % (
+    #     original_synset, synonym_word))
+    #     if synonym_word != original_synset.lemma_names()[0]:
+    #         synonym_words.append(synonym_word)
 
     # This is for the synonym synsets that compare
     # against the original synset.
