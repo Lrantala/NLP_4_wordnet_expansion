@@ -54,9 +54,11 @@ def read_folder_contents(path_to_files):
 
 
 def find_synonyms(raw_df):
+    start = timer()
     # This defines the lists that are sent to the wordnet synonym search
     lists_of_words = ["nltk_lesk_aspect_synset"]
-    list_of_list_of_synonyms = []
+    full_list_of_synonyms = []
+    df_list_of_synonyms = pd.DataFrame()
     for i, phrase in enumerate(raw_df["aspect"]):
         list_of_synonyms = []
         synonyms = []
@@ -66,13 +68,23 @@ def find_synonyms(raw_df):
                 while k < len(raw_df[words][i]):
                     synonyms.append(find_wordnet_synonyms_nouns(raw_df[words][i][k]))
                     k += 1
-            if len(synonyms) == 1:
-                list_of_synonyms.append(*synonyms)
             if len(synonyms) > 1:
                 for synoword in synonyms:
                     list_of_synonyms.append(synoword)
-            print(raw_df[words][i])
-            print(list_of_synonyms)
+            else:
+                if len(synonyms) == 1:
+                    list_of_synonyms.append(*synonyms)
+                else:
+                    list_of_synonyms.append(synonyms)
+
+        print(raw_df[words][i])
+        print(raw_df["aspect"][i])
+        print(*list_of_synonyms)
+        full_list_of_synonyms.append(list_of_synonyms)
+    raw_df["aspect_synonyms"] = pd.Series(full_list_of_synonyms).values
+    end = timer()
+    logging.debug("Find synonyms total: %.2f seconds" % (end - start))
+    return raw_df
             #     k = 0
                 # while k < len(df[words][i]):
                 #     name = df[words][i][k][0]
@@ -82,6 +94,7 @@ def find_synonyms(raw_df):
 
 
 def find_wordnet_synonyms_nouns(noun_synset):
+    start = timer()
     original_synset = noun_synset
     synonym_words = []
     print("Original: %s" % (original_synset))
@@ -143,6 +156,8 @@ def find_wordnet_synonyms_nouns(noun_synset):
         for similar in original_synset.similar_tos():
             print("Original: %s satellite_adjective: %s" % (
                 original_synset, similar))
+    end = timer()
+    logging.debug("Wordnet cycle: %.2f seconds" % (end - start))
     return synonym_words
 
 
@@ -289,10 +304,10 @@ def main(raw_df, name):
     df = wsd_lesk(df, 2)
     df = wsd_lesk(df, 3)
     df = wsd_lesk(df, 4)
-    find_synonyms(df)
+    df = find_synonyms(df)
 
-    # df = reformat_output_file(df)
-    # save_file(df, name + "_WORDNET_WSD")
+    df = reformat_output_file(df)
+    save_file(df, name + "_WORDNET_WSD")
     # wsd_pywsd_simple_lesk(df)
     # wsd_pywsd_adapted_lesk(df)
     # find_synonyms(df)
