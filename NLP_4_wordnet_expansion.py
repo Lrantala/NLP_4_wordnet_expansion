@@ -12,6 +12,12 @@ import nltk
 
 semcor_ic = nltk.corpus.wordnet_ic.ic('ic-semcor.dat')
 
+# This dictionary lists all the special cases for specific nouns, and their
+# correct Wordnet synsets. Key is a single word, and the value is a
+# specific synset code.
+special_word_dictionary = {"bug" : "bug.n.02",
+                           "good" : "good.a.01"}
+
 def open_file(file, type):
     if type == "warriner":
         logging.debug("Entering open file warriner")
@@ -65,14 +71,15 @@ def find_synonyms(raw_df):
         list_of_opinion_synonyms = []
         for words in lists_of_words:
             synonyms_all = []
-            synonyms_nouns = []
-            synonyms_common = []
             if len(raw_df[words][i]) != 0:
                 k = 0
                 while k < len(raw_df[words][i]):
-                    synonyms_common.append(find_wordnet_synonyms_all_words(raw_df[words][i][k]))
-                    synonyms_nouns.append(find_wordnet_synonyms_nouns(raw_df[words][i][k]))
-                    synonyms_all = synonyms_common + synonyms_nouns
+                    synonyms_common = find_wordnet_synonyms_all_words(raw_df[words][i][k])
+                    if words is "nltk_lesk_aspect_synset":
+                        synonyms_other = find_wordnet_synonyms_nouns(raw_df[words][i][k])
+                    else:
+                        synonyms_other = find_wordnet_synonyms_adjectives_adverbs(raw_df[words][i][k])
+                    synonyms_all.append(synonyms_common + synonyms_other)
                     k += 1
             if len(synonyms_all) > 1:
                 for synoword in synonyms_all:
@@ -111,8 +118,22 @@ def find_synonyms(raw_df):
                 #     k+=1
 
 
+def find_wordnet_synonyms_adjectives_adverbs(noun_synset):
+    """Finds synonym words for adjectives, called satellite adjectives."""
+    start = timer()
+    synonym_words = []
+    original_synset = noun_synset
+    for similar in original_synset.similar_tos():
+        print("Original: %s satellite_adjective: %s" % (
+            original_synset, similar))
+        synonym_words.append(similar.lemma_names()[0])
+    end = timer()
+    logging.debug("Find Wordnet(all) cycle: %.2f seconds" % (end - start))
+    return synonym_words
+
+
 def find_wordnet_synonyms_all_words(noun_synset):
-    # This is for the synonym words from this exact synset.
+    """Finds synonym words from this exact synset regardless of the pos-tag."""
     start = timer()
     synonym_words = []
     original_synset = noun_synset
@@ -143,13 +164,13 @@ def find_wordnet_synonyms_nouns(noun_synset):
     if original_synset.pos() == "n":
         for synonym_synset in wn.synsets(original_synset.lemma_names()[0], original_synset.pos()):
             # print(synonym)
-            if (original_synset != synonym_synset) and (original_synset.lch_similarity(synonym_synset) >= 2.25):
+            if (original_synset != synonym_synset) and (original_synset.lch_similarity(synonym_synset) >= 2.5):
                 if synonym_synset.lemma_names()[0] not in synonym_words:
                     synonym_words.append(synonym_synset.lemma_names()[0])
                 print("Original: %s other synsets: %s LCH-similarity %s" % (
                     original_synset, synonym_synset, original_synset.lch_similarity(synonym_synset)))
                 for nested_hyponym_synset in synonym_synset.hyponyms():
-                    if original_synset.lch_similarity(nested_hyponym_synset) >= 2.25:
+                    if original_synset.lch_similarity(nested_hyponym_synset) >= 2.5:
                         synonym_words.append(nested_hyponym_synset.lemma_names()[0])
                         print("Other synset: %s nested_hyponym words: %s LCH(original) %s" % (synonym_synset, nested_hyponym_synset, original_synset.lch_similarity(nested_hyponym_synset)))
 
@@ -171,7 +192,7 @@ def find_wordnet_synonyms_nouns(noun_synset):
 
     # This part deals with adjectives, that
     # have different relations than nouns.
-    if original_synset.pos() == "a":
+    # if original_synset.pos() == "a":
 
         # This is for antonyms (opposites e.g. dry-wet), it
         # loops through all synonyms, although antonym seems
@@ -184,10 +205,10 @@ def find_wordnet_synonyms_nouns(noun_synset):
         # This is for similar adjectives, which are
         # also called satellites:
         # https://wordnet.princeton.edu/documentation/wngloss7wn
-        for similar in original_synset.similar_tos():
-            print("Original: %s satellite_adjective: %s" % (
-                original_synset, similar))
-            synonym_words.append(similar.lemma_names()[0])
+        # for similar in original_synset.similar_tos():
+        #     print("Original: %s satellite_adjective: %s" % (
+        #         original_synset, similar))
+        #     synonym_words.append(similar.lemma_names()[0])
     end = timer()
     logging.debug("Wordnet cycle: %.2f seconds" % (end - start))
     return synonym_words
@@ -206,6 +227,15 @@ def find_wordnet_pos(pos_tag):
     else:
         # If the word is not found, it is assumed to be a noun.
         return wn.NOUN
+
+
+def check_for_special_word(word):
+    """Check the special dictionary and returns a value if the word
+    exists as a key. Otherwise returns None."""
+    if word[0] in special_word_dictionary:
+        return wn.synset(special_word_dictionary[word[0]])
+    else:
+        return None
 
 
 def wsd_lesk(raw_df, algorithm_choice):
@@ -236,8 +266,12 @@ def wsd_lesk(raw_df, algorithm_choice):
         for i, phrase in enumerate(df[opinion_list]):
             multiple_word_found = False
             for j, word in enumerate(phrase):
+                special_word = False
                 if multiple_word_found is False:
-                    aspect = None
+                    # Check here for special words such as "bug".
+                    aspect = check_for_special_word(word)
+                    if aspect is not None:
+                        special_word = True
                     wn_check = []
                     if len(phrase) >= 2:
                         k = 0
@@ -252,28 +286,29 @@ def wsd_lesk(raw_df, algorithm_choice):
                         wn_check = wn.synsets(word[0], pos=find_wordnet_pos(word[1]))
                         multiple_word_found = False
                     if len(wn_check) > 0:
-                        if algorithm_choice == 1:
-                            if multiple_word_found is True:
-                                aspect = lesk(tokenized_sentences[i], combined_word_string, find_wordnet_pos(word[1]))
-                            else:
-                                aspect = lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
-                        if algorithm_choice == 2:
-                            if multiple_word_found is True:
-                                aspect = pylesk.simple_lesk(non_tokenized_sentences[i], combined_word_string, find_wordnet_pos(word[1]))
-                            else:
-                                aspect = pylesk.simple_lesk(non_tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
-                        if algorithm_choice == 3:
-                            if multiple_word_found is True:
-                                aspect = pylesk.adapted_lesk(non_tokenized_sentences[i], combined_word_string,
+                        if special_word is False:
+                            if algorithm_choice == 1:
+                                if multiple_word_found is True:
+                                    aspect = lesk(tokenized_sentences[i], combined_word_string, find_wordnet_pos(word[1]))
+                                else:
+                                    aspect = lesk(tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+                            if algorithm_choice == 2:
+                                if multiple_word_found is True:
+                                    aspect = pylesk.simple_lesk(non_tokenized_sentences[i], combined_word_string, find_wordnet_pos(word[1]))
+                                else:
+                                    aspect = pylesk.simple_lesk(non_tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+                            if algorithm_choice == 3:
+                                if multiple_word_found is True:
+                                    aspect = pylesk.adapted_lesk(non_tokenized_sentences[i], combined_word_string,
                                                              find_wordnet_pos(word[1]))
-                            else:
-                                aspect = pylesk.adapted_lesk(non_tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
-                        if algorithm_choice == 4:
-                            if multiple_word_found is True:
-                                aspect = pylesk.cosine_lesk(non_tokenized_sentences[i], combined_word_string,
+                                else:
+                                    aspect = pylesk.adapted_lesk(non_tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+                            if algorithm_choice == 4:
+                                if multiple_word_found is True:
+                                    aspect = pylesk.cosine_lesk(non_tokenized_sentences[i], combined_word_string,
                                                             find_wordnet_pos(word[1]))
-                            else:
-                                aspect = pylesk.cosine_lesk(non_tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
+                                else:
+                                    aspect = pylesk.cosine_lesk(non_tokenized_sentences[i], word[0], find_wordnet_pos(word[1]))
                         if aspect is not None:
                             if opinion_list is "aspect_tags":
                                 aspect_synset_list.append(aspect)
