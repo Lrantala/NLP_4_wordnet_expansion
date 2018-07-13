@@ -9,6 +9,7 @@ from nltk.wsd import lesk
 import pywsd.lesk as pylesk
 import ast
 import nltk
+import itertools
 
 semcor_ic = nltk.corpus.wordnet_ic.ic('ic-semcor.dat')
 
@@ -356,6 +357,42 @@ def tokenize_sentences(raw_df):
     return df
 
 
+def create_new_aspects_from_synonyms(raw_df):
+    df = raw_df
+    df2 = pd.DataFrame()
+    df3 = pd.DataFrame(columns=df.columns)
+    k = 0
+    for i, phrase in enumerate(df["aspect"]):
+        print(phrase)
+        # This matches aspects against synonyms.
+        for aspects in df["aspect_synonyms"][i]:
+            #This checks if the list is empty.
+            if len(aspects) > 0:
+                for single_aspect in aspects:
+                    df3.loc[len(df3)] = df.loc[i]
+                    df3["aspect"][k] = single_aspect
+                    print(len(single_aspect))
+                    print(single_aspect)
+                    k += 1
+    print("yeah")
+    # match the new aspects against old opinionated words
+    # for i, phrase in enumerate(raw_df["aspect"]):
+    #     for aspects in df["aspect_synonyms"][i]:
+    #         for single_aspect in aspects:
+    #             if len(df["opinion"][i]) > 1:
+    #                 for opinions in df["opinion"][i]:
+    #                     for single_opinion in opinions:
+    #             # for aspects, opinion in itertools.product(df["aspect_synonyms"], df["opinion"]):
+    #                         print("%s, %s" % (single_aspect, single_opinion))
+    #             else:
+    #                 for single_opinion in df["opinion"][i]:
+    #                     print("%s, %s" % (single_aspect, single_opinion))
+
+
+    # match all the aspects against new opinionated words
+    print("jo.")
+    return df
+
 def reformat_output_file(raw_df):
     df = raw_df.drop(["aspect_v1", "aspect_a1", "aspect_d1", "aspect_v2", "aspect_a2", "aspect_d2",
                               "aspect_v3", "aspect_a3", "aspect_d3", "aspect_v4", "aspect_a4", "aspect_d4",
@@ -372,6 +409,7 @@ def main(raw_df, name):
     df = wsd_lesk(df, 3)
     df = wsd_lesk(df, 4)
     df = find_synonyms(df)
+    df = create_new_aspects_from_synonyms(df)
 
     df = reformat_output_file(df)
     save_file(df, name + "_WORDNET_WSD")
