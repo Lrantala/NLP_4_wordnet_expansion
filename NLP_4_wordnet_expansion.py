@@ -358,6 +358,7 @@ def tokenize_sentences(raw_df):
 
 
 def create_new_aspects_from_synonyms(raw_df):
+    start = timer()
     df = raw_df
     # This sets the lists that will be iterated over
     iterateble_aspect_opinion = ["aspect", "opinion"]
@@ -387,7 +388,10 @@ def create_new_aspects_from_synonyms(raw_df):
                             df3[aolist][k] = single_aspect
                             print(single_aspect)
                             k += 1
-    print("yeah")
+                    # else:
+                    #     df3.loc[len(df3)] = df.loc[i]
+                    #     df3[aolist][k] = df[aolist][i]
+                    #     k += 1
     # match the new aspects against old opinionated words
     # for i, phrase in enumerate(raw_df["aspect"]):
     #     for aspects in df["aspect_synonyms"][i]:
@@ -403,8 +407,9 @@ def create_new_aspects_from_synonyms(raw_df):
 
 
     # match all the aspects against new opinionated words
-    print("jo.")
-    return df3
+    end = timer()
+    logging.debug("Find synonyms from aspects: %.2f seconds" % (end - start))
+    return pd.concat([df, df3], ignore_index=True)
 
 def reformat_output_file(raw_df):
     df = raw_df.drop(["aspect_v1", "aspect_a1", "aspect_d1", "aspect_v2", "aspect_a2", "aspect_d2",
