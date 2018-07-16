@@ -359,32 +359,34 @@ def tokenize_sentences(raw_df):
 
 def create_new_aspects_from_synonyms(raw_df):
     df = raw_df
-    df2 = pd.DataFrame()
+    # This sets the lists that will be iterated over
+    iterateble_aspect_opinion = ["aspect", "opinion"]
     df3 = pd.DataFrame(columns=df.columns)
     k = 0
     for i, phrase in enumerate(df["aspect"]):
         print(phrase)
-        multi_word_check = False
         # This matches aspects against synonyms.
-        for aspects in df["aspect_synonyms"][i]:
-            #This checks if the list is empty.
-            if multi_word_check is False:
-                print("Synonyms length: %s" % (len(df["aspect_synonyms"][i])))
-                if len(df["aspect_synonyms"][i]) > 1:
-                    multi_word_check = True
-                    for word in itertools.product(*df["aspect_synonyms"][i]):
-                        combined_word = " ".join(word)
-                        df3.loc[len(df3)] = df.loc[i]
-                        df3["aspect"][k] = combined_word
-                        print(combined_word)
-                        k += 1
-                print("Aspects length: %s" % (len(aspects)))
-                if multi_word_check is False and len(aspects) > 0:
-                    for single_aspect in aspects:
-                        df3.loc[len(df3)] = df.loc[i]
-                        df3["aspect"][k] = single_aspect
-                        print(single_aspect)
-                        k += 1
+        for aolist in iterateble_aspect_opinion:
+            multi_word_aspect_check = False
+            for aspects in df[aolist + "_synonyms"][i]:
+                #This checks if the list is empty.
+                if multi_word_aspect_check is False:
+                    print("Synonyms length: %s" % (len(df[aolist + "_synonyms"][i])))
+                    if len(df[aolist + "_synonyms"][i]) > 1:
+                        multi_word_aspect_check = True
+                        for word in itertools.product(*df[aolist + "_synonyms"][i]):
+                            combined_word = " ".join(word)
+                            df3.loc[len(df3)] = df.loc[i]
+                            df3[aolist][k] = combined_word
+                            print(combined_word)
+                            k += 1
+                    print(aolist + " length: %s" % (len(aspects)))
+                    if multi_word_aspect_check is False and len(aspects) > 0:
+                        for single_aspect in aspects:
+                            df3.loc[len(df3)] = df.loc[i]
+                            df3[aolist][k] = single_aspect
+                            print(single_aspect)
+                            k += 1
     print("yeah")
     # match the new aspects against old opinionated words
     # for i, phrase in enumerate(raw_df["aspect"]):
