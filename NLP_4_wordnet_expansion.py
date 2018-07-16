@@ -364,16 +364,27 @@ def create_new_aspects_from_synonyms(raw_df):
     k = 0
     for i, phrase in enumerate(df["aspect"]):
         print(phrase)
+        multi_word_check = False
         # This matches aspects against synonyms.
         for aspects in df["aspect_synonyms"][i]:
             #This checks if the list is empty.
-            if len(aspects) > 0:
-                for single_aspect in aspects:
-                    df3.loc[len(df3)] = df.loc[i]
-                    df3["aspect"][k] = single_aspect
-                    print(len(single_aspect))
-                    print(single_aspect)
-                    k += 1
+            if multi_word_check is False:
+                print("Synonyms length: %s" % (len(df["aspect_synonyms"][i])))
+                if len(df["aspect_synonyms"][i]) > 1:
+                    multi_word_check = True
+                    for word in itertools.product(*df["aspect_synonyms"][i]):
+                        combined_word = " ".join(word)
+                        df3.loc[len(df3)] = df.loc[i]
+                        df3["aspect"][k] = combined_word
+                        print(combined_word)
+                        k += 1
+                print("Aspects length: %s" % (len(aspects)))
+                if multi_word_check is False and len(aspects) > 0:
+                    for single_aspect in aspects:
+                        df3.loc[len(df3)] = df.loc[i]
+                        df3["aspect"][k] = single_aspect
+                        print(single_aspect)
+                        k += 1
     print("yeah")
     # match the new aspects against old opinionated words
     # for i, phrase in enumerate(raw_df["aspect"]):
@@ -391,7 +402,7 @@ def create_new_aspects_from_synonyms(raw_df):
 
     # match all the aspects against new opinionated words
     print("jo.")
-    return df
+    return df3
 
 def reformat_output_file(raw_df):
     df = raw_df.drop(["aspect_v1", "aspect_a1", "aspect_d1", "aspect_v2", "aspect_a2", "aspect_d2",
@@ -409,10 +420,10 @@ def main(raw_df, name):
     df = wsd_lesk(df, 3)
     df = wsd_lesk(df, 4)
     df = find_synonyms(df)
-    df = create_new_aspects_from_synonyms(df)
+    df2 = create_new_aspects_from_synonyms(df)
 
-    df = reformat_output_file(df)
-    save_file(df, name + "_WORDNET_WSD")
+    df2 = reformat_output_file(df2)
+    save_file(df2, name + "_WORDNET_WSD")
     # wsd_pywsd_simple_lesk(df)
     # wsd_pywsd_adapted_lesk(df)
     # find_synonyms(df)
