@@ -18,7 +18,22 @@ semcor_ic = nltk.corpus.wordnet_ic.ic('ic-semcor.dat')
 # specific synset code.
 special_word_dictionary = {"bug" : "bug.n.02",
                            "good" : "good.a.01",
-                           "very" : "very.r.01"}
+                           "very" : "very.r.01",
+                           "window" : "window.n.08",
+                           "file" : "file.n.01",
+                           "memory" : "memory.n.04",
+                           "patch" : "patch.n.05",
+                           "error" : "error.n.06",
+                           "browser" : "browser.n.02",
+                           "page" : "page.n.01",
+                           "platform" : "platform.n.03",
+                           "value" : "value.n.01",
+                           "version" : "version.n.02",
+                           "browsing" : "browse.n.02",
+                           "call" : "call.n.10",
+                           "device" : "device.n.01",
+                           "app" : "application.n.04"
+                           }
 
 def open_file(file, type):
     if type == "warriner":
@@ -30,8 +45,9 @@ def open_file(file, type):
     # This transforms the csv-string back to a list
         raw_table['aspect'] = raw_table['aspect'].map(ast.literal_eval)
         raw_table['opinion'] = raw_table['opinion'].map(ast.literal_eval)
-        raw_table['opinion_tags'] = raw_table['opinion_tags'].map(ast.literal_eval)
-        raw_table['aspect_tags'] = raw_table['aspect_tags'].map(ast.literal_eval)
+        # This is for the new files made with R:
+        raw_table['opinion_tags'] = raw_table['opinion_tags_2'].map(ast.literal_eval)
+        raw_table['aspect_tags'] = raw_table['aspect_tags_2'].map(ast.literal_eval)
         raw_table['original_lemmas'] = raw_table['original_lemmas'].map(ast.literal_eval)
     return raw_table
 
@@ -282,7 +298,7 @@ def wsd_lesk(raw_df, algorithm_choice):
                             temporary_combined_word.append(phrase[k][0])
                             k += 1
                         combined_word_string = '_'.join(temporary_combined_word)
-                        wn_check = wn.synsets(combined_word_string, pos=find_wordnet_pos(word[k][1]))
+                        wn_check = wn.synsets(combined_word_string, pos=find_wordnet_pos(word[1]))
                         multiple_word_found = True
                     if len(wn_check) == 0:
                         wn_check = wn.synsets(word[0], pos=find_wordnet_pos(word[1]))
@@ -395,7 +411,7 @@ def create_new_aspects_from_synonyms(raw_df):
                     # print(aolist + " length: %s" % (len(aspects)))
                     # This checks if the list is empty and that it isn't already
                     # included in multi-word expression.
-                    if multi_word_aspect_check is False and len(aspects) > 0:
+                    if multi_word_aspect_check is False and len(df[aolist + "_synonyms"][i]) > 0:
                         for single_aspect in aspects:
                             df3.loc[len(df3)] = df.loc[i]
                             df3[aolist][k] = single_aspect
@@ -417,6 +433,7 @@ def create_new_aspects_from_synonyms(raw_df):
     # match all the aspects against new opinionated words
     end = timer()
     logging.debug("Find synonyms from aspects: %.2f seconds" % (end - start))
+
     return pd.concat([df, df3], ignore_index=True)
 
 def reformat_output_file(raw_df, selection):
@@ -424,13 +441,15 @@ def reformat_output_file(raw_df, selection):
         df = raw_df.drop(["aspect_v1", "aspect_a1", "aspect_d1", "aspect_v2", "aspect_a2", "aspect_d2",
                               "aspect_v3", "aspect_a3", "aspect_d3", "aspect_v4", "aspect_a4", "aspect_d4",
                               "original_lemmas", "aspect_tags", "opinion_tags", "tokenized_sentence"], axis=1)
-    else:
+    if selection is 2:
         df = raw_df.drop(["original_lemmas", "aspect_tags", "opinion_tags", "tokenized_sentence", "nltk_lesk_aspect_synset",
                           "nltk_lesk_aspect_definition", "nltk_lesk_opinion_synset", "nltk_lesk_opinion_definition",
                           "pywsd_simple_lesk_aspect_synset", "pywsd_simple_lesk_aspect_definition",	"pywsd_simple_lesk_opinion_synset",
                           "pywsd_simple_lesk_opinion_definition", "pywsd_advanced_lesk_aspect_synset", "pywsd_advanced_lesk_aspect_definition",
                           "pywsd_advanced_lesk_opinion_synset", "pywsd_advanced_lesk_opinion_definition", "pywsd_cosine_lesk_aspect_synset",
                           "pywsd_cosine_lesk_aspect_definition", "pywsd_cosine_lesk_opinion_synset", "pywsd_cosine_lesk_opinion_definition"], axis=1)
+    else:
+        df = raw_df.drop(["original_lemmas", "tokenized_sentence"], axis=1)
     return df
 
 
@@ -441,14 +460,14 @@ def main(raw_df, name):
     df = tokenize_sentences(df)
     df = wsd_lesk(df, 1)
     df = wsd_lesk(df, 2)
-    df = wsd_lesk(df, 3)
-    df = wsd_lesk(df, 4)
+    # df = wsd_lesk(df, 3)
+    # df = wsd_lesk(df, 4)
     df = find_synonyms(df)
     df = create_new_aspects_from_synonyms(df)
     df["aspect"] = flatten_column_lists(df["aspect"])
     df["opinion"] = flatten_column_lists(df["opinion"])
 
-    df = reformat_output_file(df, 2)
+    df = reformat_output_file(df, 3)
     save_file(df, name + "_WORDNET_WSD")
     end = timer()
     logging.debug("Whole program: %.2f seconds" % (end - start))
